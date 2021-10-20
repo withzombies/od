@@ -7,6 +7,7 @@ import os.path
 import subprocess
 import glob
 import shlex
+import tempfile
 from collections import defaultdict
 
 from pydub import AudioSegment
@@ -77,6 +78,8 @@ for path, chapters in paths.items():
                     "filename" : new_name
             })
 
+            continue
+
             if end != -1:
                 chapter_audio = sound[start * 1000 : end * 1000]
             else:
@@ -90,7 +93,7 @@ for path, chapters in paths.items():
         idx = chapter['idx']
         ch_title = chapter['title']
         new_name = f"{idx:03d} - {ch_title}.mp3"
-        open(os.path.join(output_directory, new_name), "wb").write(open(os.path.join(directory, path), "rb").read())
+        #open(os.path.join(output_directory, new_name), "wb").write(open(os.path.join(directory, path), "rb").read())
 
         output_chapters.append({
             "chapter-title" : ch_title,
@@ -104,9 +107,14 @@ cmd = ['/Applications/AudioBookBinder.app/Contents/MacOS/abbinder',
         '-C', os.path.join(directory, 'cover.jpg'),
         '-o', os.path.join(output_directory, f"{author} - {book_title}.m4b")]
 
+files = tempfile.NamedTemporaryFile(mode="w", encoding="utf8")
 for chapter in output_chapters:
-    cmd += [f"@{chapter['chapter-title']}@", os.path.join(output_directory, chapter['filename'])]
+    files.write(f"@{chapter['chapter-title']}@\n")
+    files.write(os.path.join(output_directory, chapter['filename']) + '\n')
 
+cmd += ['-i', files.name]
+
+print(shlex.join(cmd))
 subprocess.call(cmd)
 
 print(f"[+] Done!")
