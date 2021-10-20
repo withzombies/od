@@ -24,12 +24,12 @@ author = manifest["author"]
 chapters = manifest["chapters"]
 
 output_directory = os.path.join('output', f"{author} - {title}")
-open(os.path.join(output_directory, "description.txt"), "w").write(manifest['description'])
-
 try:
     os.makedirs(output_directory)
 except:
     pass
+
+open(os.path.join(output_directory, "description.txt"), "w").write(manifest['description'])
 
 paths = defaultdict(list)
 
@@ -54,7 +54,6 @@ for chapter in chapters:
         })
 
 for path, chapters in paths.items():
-    break
     chapter_titles = [chapter['title'] for chapter in chapters]
     print(f"Splitting {path} into {chapter_titles}")
     if len(chapters) > 1:
