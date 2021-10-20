@@ -6,6 +6,7 @@ import json
 import os.path
 import subprocess
 import glob
+import shlex
 from collections import defaultdict
 
 from pydub import AudioSegment
@@ -19,11 +20,11 @@ manifest_path = os.path.join(directory, "manifest.json")
 manifest = json.load(open(manifest_path))
 
 
-title = manifest["title"]
+book_title = manifest["title"]
 author = manifest["author"]
 chapters = manifest["chapters"]
 
-output_directory = os.path.join('output', f"{author} - {title}")
+output_directory = os.path.join('output', f"{author} - {book_title}")
 try:
     os.makedirs(output_directory)
 except:
@@ -33,7 +34,7 @@ open(os.path.join(output_directory, "description.txt"), "w").write(manifest['des
 
 paths = defaultdict(list)
 
-print(f"[+] Found: {title} by {author}")
+print(f"[+] Found: {book_title} by {author}")
 print("Chapters:")
 for chapter in chapters:
     idx = chapter['chapter']
@@ -47,11 +48,13 @@ for chapter in chapters:
         offset = 0
 
     paths[path].append({
-        'title': title,
+        'title': ch_title,
         'idx': idx,
         'start': offset,
         'end': -1
         })
+
+output_chapters = []
 
 for path, chapters in paths.items():
     chapter_titles = [chapter['title'] for chapter in chapters]
@@ -61,7 +64,7 @@ for path, chapters in paths.items():
         for i in range(len(chapters) - 1):
             chapters[i]['end'] = chapters[i + 1]['start']
 
-        sound = AudioSegment.from_mp3(os.path.join(directory, path))
+        #sound = AudioSegment.from_mp3(os.path.join(directory, path))
         for chapter in chapters:
             start = int(chapter['start'])
             end = int(chapter['end'])
@@ -69,12 +72,18 @@ for path, chapters in paths.items():
             ch_title = chapter['title']
             new_name = f"{idx:03d} - {ch_title}.mp3"
 
+            output_chapters.append({
+                    "chapter-title" : ch_title,
+                    "filename" : new_name
+            })
+
             if end != -1:
                 chapter_audio = sound[start * 1000 : end * 1000]
             else:
                 chapter_audio = sound[start:]
 
             chapter_audio.export(os.path.join(output_directory, new_name), format='mp3')
+
     else:
         # one chapter per file, rename file
         chapter = chapters[0]
@@ -82,5 +91,22 @@ for path, chapters in paths.items():
         ch_title = chapter['title']
         new_name = f"{idx:03d} - {ch_title}.mp3"
         open(os.path.join(output_directory, new_name), "wb").write(open(os.path.join(directory, path), "rb").read())
+
+        output_chapters.append({
+            "chapter-title" : ch_title,
+            "filename" : new_name
+        })
+
+
+cmd = ['/Applications/AudioBookBinder.app/Contents/MacOS/abbinder',
+        '-a', author,
+        '-t', book_title,
+        '-C', os.path.join(directory, 'cover.jpg'),
+        '-o', os.path.join(output_directory, f"{author} - {book_title}.m4b")]
+
+for chapter in output_chapters:
+    cmd += [f"@{chapter['chapter-title']}@", os.path.join(output_directory, chapter['filename'])]
+
+subprocess.call(cmd)
 
 print(f"[+] Done!")
