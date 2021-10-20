@@ -65,7 +65,7 @@ for path, chapters in paths.items():
         for i in range(len(chapters) - 1):
             chapters[i]['end'] = chapters[i + 1]['start']
 
-        #sound = AudioSegment.from_mp3(os.path.join(directory, path))
+        sound = AudioSegment.from_mp3(os.path.join(directory, path))
         for chapter in chapters:
             start = int(chapter['start'])
             end = int(chapter['end'])
@@ -77,8 +77,6 @@ for path, chapters in paths.items():
                     "chapter-title" : ch_title,
                     "filename" : new_name
             })
-
-            continue
 
             if end != -1:
                 chapter_audio = sound[start * 1000 : end * 1000]
@@ -93,7 +91,7 @@ for path, chapters in paths.items():
         idx = chapter['idx']
         ch_title = chapter['title']
         new_name = f"{idx:03d} - {ch_title}.mp3"
-        #open(os.path.join(output_directory, new_name), "wb").write(open(os.path.join(directory, path), "rb").read())
+        open(os.path.join(output_directory, new_name), "wb").write(open(os.path.join(directory, path), "rb").read())
 
         output_chapters.append({
             "chapter-title" : ch_title,
@@ -105,16 +103,17 @@ cmd = ['/Applications/AudioBookBinder.app/Contents/MacOS/abbinder',
         '-a', author,
         '-t', book_title,
         '-C', os.path.join(directory, 'cover.jpg'),
-        '-o', os.path.join(output_directory, f"{author} - {book_title}.m4b")]
+        '-o', os.path.join('output', f"{author} - {book_title}.m4b"),
+        '-s', '-v']
 
-files = tempfile.NamedTemporaryFile(mode="w", encoding="utf8")
+files = tempfile.NamedTemporaryFile(mode="w", encoding="utf8", delete=False)
 for chapter in output_chapters:
     files.write(f"@{chapter['chapter-title']}@\n")
     files.write(os.path.join(output_directory, chapter['filename']) + '\n')
+files.flush()
 
 cmd += ['-i', files.name]
 
-print(shlex.join(cmd))
 subprocess.call(cmd)
 
 print(f"[+] Done!")
